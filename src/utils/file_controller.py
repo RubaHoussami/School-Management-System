@@ -33,7 +33,6 @@ def register_student(name: str, age: int, email: str) -> tuple[dict[str, str], i
 
 def add_student_to_course(student_id: int, course_id: int) -> tuple[dict[str, str], int]:
     global students, courses
-    print(students, courses)
     if student_id in students and course_id in courses:
         student = students[student_id]
         course = courses[course_id]
@@ -152,7 +151,7 @@ def remove_instructor(instructor_id: int) -> tuple[dict[str, str], int]:
     global instructors
     if instructor_id in instructors:
         instructor = instructors[instructor_id]
-        for course_id in instructor.courses:
+        for course_id in instructor.assigned_courses:
             course = courses[course_id]
             course.remove_instructor(instructor)
         del instructors[instructor_id]
@@ -229,11 +228,11 @@ def remove_course(course_id: int) -> tuple[dict[str, str], int]:
     if course_id in courses:
         course = courses[course_id]
         for student_id in course.students:
-            student = students[student_id]
-            student.unregister_course(course_id)
+            student = course.students[student_id]
+            student._unregister_course(course_id)
         for instructor_id in course.instructors:
-            instructor = instructors[instructor_id]
-            instructor.remove_course(course_id)
+            instructor = course.instructors[instructor_id]
+            instructor._remove_course(course_id)
         del courses[course_id]
         return {"message": "Course deleted successfully"}, 200
     return {"message": "Course not found"}, 404

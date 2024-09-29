@@ -4,7 +4,6 @@ from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, QH
                              QMessageBox, QDialog, QTabWidget, QListWidget, QTextEdit)
 from PyQt5.QtCore import QTimer, Qt
 from src.managers.data_manager import DataManager
-from src.utils.file_controller import terminate
 
 def boot_pyqt(database):
     if database:
@@ -386,6 +385,9 @@ def boot_pyqt(database):
                     data_manager.save_to_csv(students, instructors, courses)
                 elif format == "json":
                     data_manager.save_to_json(students, instructors, courses)
+                else:
+                    QMessageBox.critical(self, "Error", "Invalid format specified.")
+                    return
                 QMessageBox.information(self, "Success", f"Session saved as {format}.")
             else:
                 save_window = SaveSessionWindow(self)
@@ -685,11 +687,12 @@ def boot_pyqt(database):
         def view_students(self):
             students, status = get_students()
             self.view_students_list.clear()
-            
+
             if status == 200 and students:
-                for student in students['students'].values():
-                    courses = get_student_courses(student.student_id)
-                    course_names = ", ".join([course.name for course in courses]) if courses else "No courses"
+                for student_id in students['students']:
+                    student = students['students'][student_id]
+                    courses, _ = get_student_courses(student.registered_courses)
+                    course_names = ", ".join(courses['courses']) if courses['courses'] else "No courses"
                     self.view_students_list.addItem(f"Name: {student.name}, ID: {student.student_id}, Email: {student._email}")
                     self.view_students_list.addItem(f"Courses: {course_names}")
                     self.view_students_list.addItem("")
@@ -699,12 +702,14 @@ def boot_pyqt(database):
 
         def view_instructors(self):
             instructors, status = get_instructors()
+            instructors, status = get_instructors()
             self.view_instructors_list.clear()
             
             if status == 200 and instructors:
-                for instructor in instructors['instructors'].values():
-                    courses = get_instructor_courses(instructor.instructor_id)
-                    course_names = ", ".join([course.name for course in courses]) if courses else "No courses"
+                for instructor_id in instructors['instructors']:
+                    instructor = instructors['instructors'][instructor_id]
+                    courses, _ = get_instructor_courses(instructor.assigned_courses)
+                    course_names = ", ".join(courses['courses']) if courses['courses'] else "No courses"
                     self.view_instructors_list.addItem(f"Name: {instructor.name}, ID: {instructor.instructor_id}, Email: {instructor._email}")
                     self.view_instructors_list.addItem(f"Courses: {course_names}")
                     self.view_instructors_list.addItem("")
@@ -727,14 +732,23 @@ def boot_pyqt(database):
             name = self.search_student_name_entry.text().strip()
             student_id = self.search_student_id_entry.text().strip()
             email = self.search_student_email_entry.text().strip()
-            
-            students, status = search_students(name, student_id, email)
+
+            if name != "":
+                students, status = search_students("name", name)
+            elif student_id != "":
+                students, status = search_students("id", student_id)
+            elif email != "":
+                students, status = search_students("email", email)
+            else:
+                self.show_message("Invalid search type", "red")
+                return
+
             self.view_students_list.clear()
             
             if status == 200 and students:
                 for student in students['students']:
-                    courses = get_student_courses(student.student_id)
-                    course_names = ", ".join([course.name for course in courses]) if courses else "No courses"
+                    courses, _ = get_student_courses(student.registered_courses)
+                    course_names = ", ".join(courses['courses']) if courses['courses'] else "No courses"
                     self.view_students_list.addItem(f"Name: {student.name}, ID: {student.student_id}, Email: {student._email}")
                     self.view_students_list.addItem(f"Courses: {course_names}")
                     self.view_students_list.addItem("")
@@ -747,7 +761,16 @@ def boot_pyqt(database):
             instructor_id = self.search_instructor_id_entry.text().strip()
             email = self.search_instructor_email_entry.text().strip()
             
-            instructors, status = search_instructors(name, instructor_id, email)
+            if name != "":
+                instructors, status = search_instructors("name", name)
+            elif instructor_id != "":
+                instructors, status = search_instructors("id", instructor_id)
+            elif email != "":
+                instructors, status = search_instructors("email", email)
+            else:
+                self.show_message("Invalid search type", "red")
+                return
+            
             self.view_instructors_list.clear()
             
             if status == 200 and instructors:
@@ -779,13 +802,13 @@ def boot_pyqt(database):
 
             self.save_format = QComboBox()
             self.save_format.addItems(["csv", "json", "pickle"])
-            self.save_format.setCurrentIndex(-1)  # No default selection
+            self.save_format.setCurrentIndex(-1)
             self.save_format.currentIndexChanged.connect(self.enable_save_button)
             layout.addWidget(self.save_format)
 
             self.save_button = QPushButton("Save")
             self.save_button.clicked.connect(self.save_and_close)
-            self.save_button.setEnabled(False)  # Disabled by default
+            self.save_button.setEnabled(False)
             layout.addWidget(self.save_button)
 
             info_label1 = QLabel("This session will be restored the next time you start the app.")
