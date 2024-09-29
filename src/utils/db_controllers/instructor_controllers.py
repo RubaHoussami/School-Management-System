@@ -10,11 +10,11 @@ def register_instructor(name: str, age: int, email: str) -> tuple[dict[str, str]
     conn = get_db_connection()
     cursor = conn.cursor()
     try:
-        if validator.validate_email(email) and validator.validate_age(age):
+        if validator.validate_name(name) and validator.validate_email(email) and validator.validate_age(age):
             cursor.execute('INSERT INTO instructors (name, age, email) VALUES (?, ?, ?)', (name, age, email))
             conn.commit()
             return {"message": f'Instructor registered successfully', "instructor_id": cursor.lastrowid}, 200
-        return {"message": "Invalid email or age"}, 400
+        return {"message": "Invalid name or email or age"}, 400
     except sqlite3.IntegrityError:
         return {"message": "Email already exists"}, 400
     finally:
@@ -93,7 +93,11 @@ def search_instructors(search_type: str, search_term: str) -> tuple[dict[str, li
     conn = get_db_connection()
     cursor = conn.cursor()
     if search_type == "name":
-        cursor.execute('SELECT * FROM instructors WHERE name = ?', (search_term,))
+        if validator.validate_name(search_term):
+            cursor.execute('SELECT * FROM instructors WHERE name = ?', (search_term,))
+        else:
+            conn.close()
+            return {"message": "Invalid name"}, 400
     elif search_type == "email":
         if validator.validate_email(search_term):
             cursor.execute('SELECT * FROM instructors WHERE email = ?', (search_term,))
@@ -141,13 +145,13 @@ def update_instructor(instructor_id: int, name: str, age: int, email: str) -> tu
     conn = get_db_connection()
     cursor = conn.cursor()
     try:
-        if validator.validate_email(email) and validator.validate_age(age):
+        if validator.validate_name(name) and validator.validate_email(email) and validator.validate_age(age):
             cursor.execute('UPDATE instructors SET name = ?, age = ?, email = ? WHERE id = ?', (name, age, email, instructor_id))
             conn.commit()
             if cursor.rowcount == 0:
                 return {"message": "Instructor not found"}, 404
             return {"message": "Instructor updated successfully"}, 200
-        return {"message": "Invalid email or age"}, 400
+        return {"message": "Invalid name or email or age"}, 400
     except sqlite3.IntegrityError:
         return {"message": "Email already exists"}, 400
     finally:

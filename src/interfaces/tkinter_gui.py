@@ -508,7 +508,7 @@ def boot_tkinter(database):
         if status == 200 and courses:
             for course in courses['courses']:
                 search_course_results.insert(tk.END, f"Name: {course.name}, ID: {course.course_id}")
-                search_course_results.insert(tk.END, f"Description: {course['description']}")
+                search_course_results.insert(tk.END, f"Description: {course.description}")
                 instructors, _ = get_instructors_by_course(course.course_id)
                 instructor_names = ", ".join(instructors['instructors']) if instructors['instructors'] else "No instructors assigned"
                 search_course_results.insert(tk.END, f"Instructors: {instructor_names}")
@@ -668,14 +668,14 @@ def boot_tkinter(database):
         if selected_indices:
             selected_index = selected_indices[0]
             selected_course = course_listbox.get(selected_index)
-            course_id = selected_course.split(",")[1].strip()
+            course_id = selected_course.split(":")[2].strip().split(",")[0].strip()
 
             instructors, status = get_instructors_by_course(int(course_id))
             instructor_listbox.delete(0, tk.END)
             
             if status == 200 and 'instructors' in instructors:
                 for instructor_id, instructor in instructors['instructors'].items():
-                    instructor_listbox.insert(tk.END, f"{instructor.name}, {instructor_id}, {instructor._email}")
+                    instructor_listbox.insert(tk.END, f"Name: {instructor.name}, ID: {instructor_id}, Email: {instructor._email}")
                 if len(instructors['instructors']) == 0:
                     instructor_listbox.insert(tk.END, "No instructors assigned to this course")
 
@@ -684,7 +684,7 @@ def boot_tkinter(database):
             
             if status == 200 and 'students' in students:
                 for student_id, student in students['students'].items():
-                    student_listbox.insert(tk.END, f"{student.name}, {student_id}, {student._email}")
+                    student_listbox.insert(tk.END, f"Name: {student.name}, ID: {student_id}, Email:{student._email}")
                 if len(students['students']) == 0:
                     student_listbox.insert(tk.END, "No students enrolled in this course")
 
@@ -734,7 +734,7 @@ def boot_tkinter(database):
         course_listbox.delete(0, tk.END)
         
         for course_id, course in courses['courses'].items():
-            text =  f"{course.name}, {str(course_id)}, {course.description}" if course.description != "" else f"{course.name}, {str(course_id)}"
+            text =  f"Name: {course.name}, ID: {str(course_id)}, Description: {course.description}" if course.description != "" else f"Name: {course.name}, ID: {str(course_id)}"
             course_listbox.insert(tk.END, text)
         message_label.config(text="Courses retrieved successfully", fg="green")
         root.after(4000, clear_message)

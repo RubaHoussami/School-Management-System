@@ -893,3 +893,4 @@ def boot_pyqt(database):
     main_window = MainWindow()
     main_window.show()
     app.exec_()
+    

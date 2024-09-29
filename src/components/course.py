@@ -36,3 +36,4 @@ class Course:
         This method returns a string representation of the object which will be needed for pickling.
         """
         return f"Course(name={self.name}, description={self.description}, course_id={self.course_id}, students={self.students}, instructors={self.instructors})"
+    

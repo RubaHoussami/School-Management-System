@@ -1,6 +1,7 @@
 import pickle
 import os
 import json
+import csv
 
 from src.components.instructor import Instructor
 from src.components.student import Student
@@ -53,16 +54,20 @@ class DataManager:
         if os.path.isfile(json_path):
             os.remove(json_path)
 
-        with open(os.path.join(self.path, 'data.csv'), 'w') as file:
-            file.write('Courses\n')
+        with open(os.path.join(self.path, 'data.csv'), 'w', newline='') as file:
+            writer = csv.writer(file)
+            writer.writerow(['Type', 'ID', 'Name', 'Age', 'Email', 'Courses/Description', 'Students', 'Instructors'])
+            
             for course in courses.values():
-                file.write(f'{course}\n')
-            file.write('\nStudents\n')
+                course_students = json.dumps({str(s_id): s.__dict__ for s_id, s in course.students.items()})
+                course_instructors = json.dumps({str(i_id): i.__dict__ for i_id, i in course.instructors.items()})
+                writer.writerow(['Course', course.course_id, course.name, '', '', course.description, course_students, course_instructors])
+            
             for student in students.values():
-                file.write(f'{student}\n')
-            file.write('\nInstructors\n')
+                writer.writerow(['Student', student.student_id, student.name, student.age, student._email, ','.join(map(str, student.registered_courses)), '', ''])
+            
             for instructor in instructors.values():
-                file.write(f'{instructor}\n')
+                writer.writerow(['Instructor', instructor.instructor_id, instructor.name, instructor.age, instructor._email, ','.join(map(str, instructor.registered_courses)), '', ''])
 
     def load_from_csv(self) -> tuple:
         """
@@ -72,26 +77,26 @@ class DataManager:
         students = {}
         instructors = {}
         courses = {}
-        with open(os.path.join(self.path, 'data.csv'), 'r') as file:
-            data = file.read().split('\n')
-            course_section = data.index('Courses') + 1
-            student_section = data.index('Students') + 1
-            instructor_section = data.index('Instructors') + 1
-
-            for i in range(course_section, student_section - 1):
-                if data[i].strip():
-                    course = Course.from_string(data[i])
-                    courses[course.id] = course
-
-            for i in range(student_section, instructor_section - 1):
-                if data[i].strip():
-                    student = Student.from_string(data[i])
-                    students[student.id] = student
-
-            for i in range(instructor_section, len(data)):
-                if data[i].strip():
-                    instructor = Instructor.from_string(data[i])
-                    instructors[instructor.id] = instructor
+        
+        with open(os.path.join(self.path, 'data.csv'), 'r', newline='') as file:
+            reader = csv.reader(file)
+            next(reader)
+            for row in reader:
+                if row[0] == 'Course':
+                    course_id = int(row[1])
+                    course_students = json.loads(row[6]) if row[6] else {}
+                    course_instructors = json.loads(row[7]) if row[7] else {}
+                    courses[course_id] = Course(row[2], row[5], course_id, 
+                                                {int(s_id): Student(**s_data) for s_id, s_data in course_students.items()},
+                                                {int(i_id): Instructor(**i_data) for i_id, i_data in course_instructors.items()})
+                elif row[0] == 'Student':
+                    student_id = int(row[1])
+                    registered_courses = list(map(int, row[5].split(','))) if row[5] else []
+                    students[student_id] = Student(row[2], int(row[3]), row[4], student_id, registered_courses)
+                elif row[0] == 'Instructor':
+                    instructor_id = int(row[1])
+                    registered_courses = list(map(int, row[5].split(','))) if row[5] else []
+                    instructors[instructor_id] = Instructor(row[2], int(row[3]), row[4], instructor_id, registered_courses)
 
         return students, instructors, courses
 
@@ -123,9 +128,34 @@ class DataManager:
         assert os.path.isfile(os.path.join(self.path, 'data.json')), 'The path specified does not contain a file named data.json.'
         with open(os.path.join(self.path, 'data.json'), 'r') as file:
             data = file.read().split('\n')
-            students = json.loads(data[0])
-            instructors = json.loads(data[1])
-            courses = json.loads(data[2])
+
+            students_data = json.loads(data[0])
+            students = {}
+            for student_id in students_data:
+                student = students_data[student_id]
+                students[int(student_id)] = Student(student['name'], int(student['age']), student['_email'], int(student['student_id']), student['registered_courses'])
+            
+            instructors_data = json.loads(data[1])
+            instructors = {}
+            for instructor_id in instructors_data:
+                instructor = instructors_data[instructor_id]
+                instructors[int(instructor_id)] = Instructor(instructor['name'], int(instructor['age']), instructor['_email'], int(instructor['instructor_id']), instructor['registered_courses'])
+            
+            courses_data = json.loads(data[2])
+            courses = {}
+            for course_id in courses_data:
+                course = courses_data[course_id]
+
+                course_students = {}
+                for student_id in course['students']:
+                    student = course['students'][student_id]
+                    course_students[int(student_id)] = Student(student['name'], int(student['age']), student['_email'], int(student['student_id']), student['registered_courses'])
+                course_instructors = {}
+                for instructor_id in course['instructors']:
+                    instructor = course['instructors'][instructor_id]
+                    course_instructors[int(instructor_id)] = Instructor(instructor['name'], int(instructor['age']), instructor['_email'], int(instructor['instructor_id']), instructor['registered_courses'])
+                courses[int(course_id)] = Course(course['name'], course['description'], int(course['course_id']), course_students, course_instructors)
+
         return students, instructors, courses
 
     def boot(self) -> tuple:

@@ -17,4 +17,3 @@ class Student(Person):
         This method returns a string representation of the object which will be needed for pickling.
         """
         return f"Student(name={self.name}, age={self.age}, email={self._email}, student_id={self.student_id}, registered_courses={self.registered_courses})"
-    

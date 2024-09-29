@@ -24,7 +24,7 @@ STUDENT CONTROLLERS
 
 def register_student(name: str, age: int, email: str) -> tuple[dict[str, str], int]:
     global students, student_id
-    if validator.validate_email(email) and validator.validate_age(age):
+    if validator.validate_name(name) and validator.validate_email(email) and validator.validate_age(age):
         student = Student(name, age, email, student_id)
         students[student_id] = student
         student_id += 1
@@ -33,6 +33,7 @@ def register_student(name: str, age: int, email: str) -> tuple[dict[str, str], i
 
 def add_student_to_course(student_id: int, course_id: int) -> tuple[dict[str, str], int]:
     global students, courses
+    print(students, courses)
     if student_id in students and course_id in courses:
         student = students[student_id]
         course = courses[course_id]
@@ -91,10 +92,13 @@ def search_students(search_type: str, search_term: str) -> tuple[dict[str, list[
     global students
     results = []
     if search_type == "name":
-        for student_id in students:
-            student = students[student_id]
-            if student.name == search_term:
-                results.append(student)
+        if validator.validate_name(search_term):
+            for student_id in students:
+                student = students[student_id]
+                if student.name == search_term:
+                    results.append(student)
+        else:
+            return {"message": "Invalid name"}, 400
     elif search_type == "email":
         if validator.validate_email(search_term):
             for student_id in students:
@@ -118,7 +122,7 @@ INSTRUCTOR CONTROLLERS
 
 def register_instructor(name: str, age: int, email: str) -> tuple[dict[str, str], int]:
     global instructors, instructor_id
-    if validator.validate_email(email) and validator.validate_age(age):
+    if validator.validate_name(name) and validator.validate_email(email) and validator.validate_age(age):
         instructor = Instructor(name, age, email, instructor_id)
         instructors[instructor_id] = instructor
         instructor_id += 1
@@ -170,10 +174,13 @@ def search_instructors(search_type: str, search_term: str) -> tuple[dict[str, li
     global instructors
     results = []
     if search_type == "name":
-        for instructor_id in instructors:
-            instructor = instructors[instructor_id]
-            if instructor.name == search_term:
-                results.append(instructor)
+        if validator.validate_name(search_term):
+            for instructor_id in instructors:
+                instructor = instructors[instructor_id]
+                if instructor.name == search_term:
+                    results.append(instructor)
+        else:
+            return {"message": "Invalid name"}, 400
     elif search_type == "email":
         if validator.validate_email(search_term):
             for instructor_id in instructors:
@@ -248,7 +255,7 @@ def search_courses(search_type: str, search_term: str) -> tuple[dict[str, list[C
     if search_type == "name":
         for course_id in courses:
             course = courses[course_id]
-            if course.name.lower() == search_term.lower():
+            if course.name == search_term:
                 results.append(course)
     elif search_type == "id":
         course_id = int(search_term)
@@ -256,7 +263,7 @@ def search_courses(search_type: str, search_term: str) -> tuple[dict[str, list[C
             results = [courses[course_id]]
     else:
         return {"message": "Invalid search type"}, 400
-    return {"courses": courses}, 200
+    return {"courses": results}, 200
     
 
 def terminate() -> tuple[dict[str, dict[int, Student]], dict[str, dict[int, Instructor]], dict[str, dict[int, Course]]]:
